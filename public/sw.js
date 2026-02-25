@@ -1,3 +1,4 @@
+// public/sw.js
 const CACHE_NAME = 'gold-calculator-v2';
 const urlsToCache = [
   '/',
@@ -11,7 +12,6 @@ self.addEventListener('install', (event) => {
       .then((cache) => {
         return cache.addAll(urlsToCache).catch((error) => {
           console.log('Cache addAll failed:', error);
-          // Still cache what we can
           return Promise.allSettled(
             urlsToCache.map(url => cache.add(url))
           );
@@ -38,6 +38,15 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // CRITICAL: Don't intercept proxy requests
+  if (url.pathname.startsWith('/hidden-app') || 
+      url.pathname.startsWith('/hidden-api')) {
+    // Let proxy handle these requests - don't cache or intercept
+    return;
+  }
+  
   // Only handle navigation requests and local resources
   if (event.request.mode === 'navigate' || 
       (event.request.url.startsWith(self.location.origin) && 

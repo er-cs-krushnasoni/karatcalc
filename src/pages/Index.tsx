@@ -1,3 +1,4 @@
+// src/pages/Index.tsx
 import { Calculator } from '../components/Calculator';
 
 const Index = () => {

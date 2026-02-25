@@ -1,9 +1,17 @@
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import { initializeSecureProxy } from './services/secureProxy'
+// src/main.tsx
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
+import { initializeConsoleSuppressor } from "./utils/consoleSuppressor";
 
-// Initialize secure proxy to hide all URLs from console
-initializeSecureProxy();
+// Initialize console suppression in production
+if (import.meta.env.PROD) {
+  initializeConsoleSuppressor();
+}
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);

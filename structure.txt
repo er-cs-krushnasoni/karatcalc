@@ -1,0 +1,69 @@
+KARAT-GEM-VALUE-FINDER/
+├── .idea/
+├── android/
+├── build-scripts/
+│   └── build-mobile.js
+├── dist/
+├── electron/
+├── electron-dist/
+│   └── win-unpacked/
+├── ios/
+├── node_modules/
+├── public/
+│   ├── favicon.ico
+│   ├── manifest.json
+│   ├── placeholder.svg
+│   ├── robots.txt
+│   └── sw.js
+├── src/
+│   ├── assets/
+│   │   └── calculator-hero.jpg
+│   ├── components/
+│   │   ├── ui/
+│   │   ├── Calculator.tsx
+│   │   ├── HiddenProject.tsx
+│   │   ├── PlatformWrapper.tsx
+│   │   ├── ProxyInitializer.tsx
+│   │   └── SecureFrame.tsx
+│   ├── config/
+│   │   ├── platform-security.ts
+│   │   └── security.ts
+│   ├── hooks/
+│   │   ├── use-mobile.tsx
+│   │   ├── use-toast.ts
+│   │   └── useCalculator.ts
+│   ├── lib/
+│   │   └── utils.ts
+│   ├── pages/
+│   │   ├── Index.tsx
+│   │   └── NotFound.tsx
+│   ├── services/
+│   │   └── secureProxy.ts
+│   ├── utils/
+│   │   ├── consoleSuppressor.ts
+│   │   └── platformUtils.ts
+│   ├── App.tsx
+│   ├── index.css
+│   ├── main.tsx
+│   └── vite-env.d.ts
+├── .env.local
+├── .gitignore
+├── bun.lockb
+├── capacitor.config.ts
+├── components.json
+├── electron.config.js
+├── eslint.config.js
+├── index.html
+├── package-lock.json
+├── package-scripts.json
+├── package.json
+├── postcss.config.js
+├── preload.js
+├── README-DEPLOYMENT.md
+├── README.md
+├── SECURITY-SETUP.md
+├── tailwind.config.ts
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts

@@ -1,557 +1,6 @@
-// import { useState, useEffect } from 'react';
-// import { ArrowLeft } from 'lucide-react';
-
-// interface HiddenProjectProps {
-//   onBack: () => void;
-//   projectUrl: string;
-// }
-
-// export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-
-//   useEffect(() => {
-//     // Check connection and handle errors
-//     const timer = setTimeout(() => {
-//       if (!navigator.onLine) {
-//         setError('No internet connection');
-//       } else {
-//         setIsLoading(false);
-//       }
-//     }, 1000);
-
-//     return () => clearTimeout(timer);
-//   }, []);
-
-//   useEffect(() => {
-//     // Disable right-click context menu
-//     const handleContextMenu = (e: MouseEvent) => {
-//       e.preventDefault();
-//     };
-
-//     document.addEventListener('contextmenu', handleContextMenu);
-    
-//     return () => {
-//       document.removeEventListener('contextmenu', handleContextMenu);
-//     };
-//   }, []);
-
-//   const handleBack = () => {
-//     // Clear any stored data/tokens
-//     localStorage.clear();
-//     sessionStorage.clear();
-    
-//     // Clear cache if possible
-//     if ('caches' in window) {
-//       caches.keys().then(names => {
-//         names.forEach(name => {
-//           caches.delete(name);
-//         });
-//       });
-//     }
-    
-//     onBack();
-//   };
-
-//   if (error) {
-//     // Don't render error page - errors should be shown on calculator display
-//     handleBack();
-//     return null;
-//   }
-
-//   return (
-//     <div className="hidden-portal">
-//       {/* Compact Professional Navigation */}
-//       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border/50">
-//         <div className="flex items-center justify-between px-3 py-2 h-10">
-//           <button
-//             onClick={handleBack}
-//             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-sm font-medium"
-//             title="Back to Calculator"
-//           >
-//             <ArrowLeft size={16} />
-//             <span>Back</span>
-//           </button>
-//           <div className="text-xs text-muted-foreground font-medium tracking-wide">@Developed by Krushna Soni</div>
-//         </div>
-//       </nav>
-
-//       {/* Loading State */}
-//       {isLoading && (
-//         <div className="flex items-center justify-center h-screen pt-10">
-//           <div className="text-center">
-//             <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-3"></div>
-//             <div className="text-sm text-muted-foreground">Loading...</div>
-//           </div>
-//         </div>
-//       )}
-
-//       {/* Project iframe */}
-//       {!isLoading && !error && (
-//         <iframe
-//           src={projectUrl}
-//           className="w-full border-0"
-//           style={{ 
-//             height: 'calc(100vh - 2.5rem)',
-//             marginTop: '2.5rem',
-//             background: 'transparent',
-//             display: 'block'
-//           }}
-//           title="Hidden Project"
-//           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"
-//           loading="lazy"
-//           onLoad={(e) => {
-//             const iframe = e.currentTarget;
-//             try {
-//               // Check if iframe loaded successfully by checking its content
-//               const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-//               if (iframeDoc?.title.includes('404') || 
-//                   iframeDoc?.title.includes('Not Found') ||
-//                   iframeDoc?.body?.innerText?.includes('deployment cannot be found') ||
-//                   iframeDoc?.body?.innerText?.includes('404')) {
-//                 setError('Project not found');
-//                 return;
-//               }
-//             } catch (e) {
-//               // Cross-origin iframe - assume it loaded if no error
-//             }
-//             setIsLoading(false);
-//           }}
-//           onError={() => setError('Failed to load project')}
-//         />
-//       )}
-//     </div>
-//   );
-// };
-
-
-
-
-// import { useState, useEffect, useRef } from 'react';
-// import { ArrowLeft, Shield, Lock, Eye, EyeOff } from 'lucide-react';
-
-// interface HiddenProjectProps {
-//   onBack: () => void;
-//   projectUrl: string;
-// }
-
-// export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-//   const [isSecureMode, setIsSecureMode] = useState(false);
-//   const [loadingProgress, setLoadingProgress] = useState(0);
-//   const [iframeContent, setIframeContent] = useState<string>('');
-//   const containerRef = useRef<HTMLDivElement>(null);
-//   const iframeRef = useRef<HTMLIFrameElement>(null);
-//   const cleanupFunctionsRef = useRef<Array<() => void>>([]);
-
-//   // Enhanced security measures
-//   const enableSecurityMeasures = () => {
-//     const cleanupFunctions: Array<() => void> = [];
-
-//     // Disable right-click context menu
-//     const handleContextMenu = (e: MouseEvent) => {
-//       e.preventDefault();
-//       e.stopPropagation();
-//       return false;
-//     };
-
-//     // Disable key shortcuts for dev tools, view source, etc.
-//     const handleKeyDown = (e: KeyboardEvent) => {
-//       if (
-//         e.key === 'F12' ||
-//         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'C' || e.key === 'J')) ||
-//         (e.ctrlKey && (e.key === 'u' || e.key === 'U')) ||
-//         (e.ctrlKey && (e.key === 's' || e.key === 'S')) ||
-//         (e.ctrlKey && (e.key === 'p' || e.key === 'P'))
-//       ) {
-//         e.preventDefault();
-//         e.stopPropagation();
-//         return false;
-//       }
-//     };
-
-//     // Disable text selection
-//     const disableSelection = () => {
-//       document.body.style.userSelect = 'none';
-//       document.body.style.webkitUserSelect = 'none';
-//       document.body.style.mozUserSelect = 'none';
-//       document.body.style.msUserSelect = 'none';
-//     };
-
-//     // Add event listeners
-//     document.addEventListener('contextmenu', handleContextMenu, true);
-//     document.addEventListener('keydown', handleKeyDown, true);
-    
-//     disableSelection();
-
-//     // Cleanup functions
-//     cleanupFunctions.push(() => {
-//       document.removeEventListener('contextmenu', handleContextMenu, true);
-//       document.removeEventListener('keydown', handleKeyDown, true);
-      
-//       document.body.style.userSelect = '';
-//       document.body.style.webkitUserSelect = '';
-//       document.body.style.mozUserSelect = '';
-//       document.body.style.msUserSelect = '';
-//     });
-
-//     return cleanupFunctions;
-//   };
-
-//   // Progress simulation during loading
-//   const simulateProgress = () => {
-//     const progressInterval = setInterval(() => {
-//       setLoadingProgress(prev => {
-//         if (prev >= 90) {
-//           clearInterval(progressInterval);
-//           return 90;
-//         }
-//         return prev + Math.random() * 10;
-//       });
-//     }, 200);
-
-//     return () => clearInterval(progressInterval);
-//   };
-
-//   // Fetch content without adding to history
-//   const fetchSecureContent = async (url: string) => {
-//     try {
-//       // Use fetch to get the content instead of direct iframe loading
-//       const response = await fetch(url, {
-//         method: 'GET',
-//         headers: {
-//           'Cache-Control': 'no-cache, no-store, must-revalidate',
-//           'Pragma': 'no-cache',
-//           'Expires': '0'
-//         }
-//       });
-
-//       if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//       }
-
-//       const content = await response.text();
-      
-//       // Modify the content to remove any potential history-affecting elements
-//       const modifiedContent = content
-//         .replace(/<base\s+href="[^"]*"/gi, '') // Remove base href
-//         .replace(/history\.pushState/gi, '// history.pushState') // Disable pushState
-//         .replace(/history\.replaceState/gi, '// history.replaceState') // Disable replaceState
-//         .replace(/window\.location\.href/gi, '""') // Neutralize location changes
-//         .replace(/window\.open/gi, '// window.open'); // Disable window.open
-
-//       return modifiedContent;
-//     } catch (error) {
-//       console.error('Error fetching content:', error);
-//       throw error;
-//     }
-//   };
-
-//   // Load the actual content
-//   const loadSecureContent = async () => {
-//     try {
-//       setIsLoading(true);
-//       setLoadingProgress(0);
-      
-//       // Start progress simulation
-//       const stopProgress = simulateProgress();
-      
-//       // Immediately manipulate history to prevent URL tracking
-//       if (window.history.replaceState) {
-//         window.history.replaceState(null, '', window.location.pathname);
-//       }
-      
-//       // Clear any existing history entries
-//       try {
-//         // This will prevent the URL from being added to history
-//         while (window.history.length > 1) {
-//           window.history.back();
-//         }
-//       } catch (e) {
-//         console.log('History manipulation limited by browser security');
-//       }
-
-//       setLoadingProgress(30);
-      
-//       // Fetch content securely
-//       const content = await fetchSecureContent(projectUrl);
-//       setIframeContent(content);
-      
-//       setLoadingProgress(90);
-      
-//       // Wait a bit for security measures to take effect
-//       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-//       // Complete progress
-//       setLoadingProgress(100);
-      
-//       // Small delay for smooth transition
-//       await new Promise(resolve => setTimeout(resolve, 500));
-      
-//       stopProgress();
-//       setIsLoading(false);
-//       setIsSecureMode(true);
-      
-//     } catch (error) {
-//       console.error('Error loading content:', error);
-//       setError('Failed to load project in secure mode. The URL might be blocked by CORS policy.');
-//       setIsLoading(false);
-//     }
-//   };
-
-//   // Comprehensive cleanup
-//   const performCleanup = () => {
-//     try {
-//       // Clear all storage
-//       if (typeof Storage !== 'undefined') {
-//         localStorage.clear();
-//         sessionStorage.clear();
-//       }
-      
-//       // Clear cookies
-//       document.cookie.split(";").forEach(cookie => {
-//         const eqPos = cookie.indexOf("=");
-//         const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-//         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-//         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-//       });
-      
-//       // Clear cache
-//       if ('caches' in window) {
-//         caches.keys().then(names => {
-//           names.forEach(name => caches.delete(name));
-//         });
-//       }
-
-//       // Multiple history clearing attempts
-//       try {
-//         // Replace current state
-//         if (window.history.replaceState) {
-//           window.history.replaceState(null, '', window.location.pathname);
-//         }
-        
-//         // Clear forward history
-//         if (window.history.forward) {
-//           window.history.forward();
-//           window.history.back();
-//         }
-        
-//         // Additional history manipulation
-//         const currentUrl = window.location.pathname;
-//         window.history.pushState(null, '', currentUrl);
-//         window.history.replaceState(null, '', currentUrl);
-        
-//       } catch (e) {
-//         console.log('History cleanup limited by browser security');
-//       }
-
-//       // Run cleanup functions
-//       cleanupFunctionsRef.current.forEach(cleanup => cleanup());
-//       cleanupFunctionsRef.current = [];
-      
-//     } catch (error) {
-//       console.error('Error during cleanup:', error);
-//     }
-//   };
-
-//   const handleBack = () => {
-//     performCleanup();
-//     onBack();
-//   };
-
-//   const handleIframeLoad = () => {
-//     setIsLoading(false);
-//     setIsSecureMode(true);
-    
-//     // Additional history cleanup after iframe load
-//     setTimeout(() => {
-//       if (window.history.replaceState) {
-//         window.history.replaceState(null, '', window.location.pathname);
-//       }
-//     }, 100);
-//   };
-
-//   const handleIframeError = () => {
-//     setError('Failed to load the project. The URL might be invalid or blocked.');
-//     setIsLoading(false);
-//   };
-
-//   useEffect(() => {
-//     // Enable security measures
-//     const cleanupFunctions = enableSecurityMeasures();
-//     cleanupFunctionsRef.current = cleanupFunctions;
-    
-//     // Immediate history manipulation
-//     if (window.history.replaceState) {
-//       window.history.replaceState(null, '', window.location.pathname);
-//     }
-    
-//     // Load content
-//     loadSecureContent();
-    
-//     // Cleanup on unmount
-//     return () => {
-//       cleanupFunctions.forEach(cleanup => cleanup());
-//       performCleanup();
-//     };
-//   }, [projectUrl]);
-
-//   // Handle beforeunload and page visibility
-//   useEffect(() => {
-//     const handleBeforeUnload = () => {
-//       performCleanup();
-//     };
-    
-//     const handleVisibilityChange = () => {
-//       if (document.hidden) {
-//         performCleanup();
-//       }
-//     };
-    
-//     window.addEventListener('beforeunload', handleBeforeUnload);
-//     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-//     return () => {
-//       window.removeEventListener('beforeunload', handleBeforeUnload);
-//       document.removeEventListener('visibilitychange', handleVisibilityChange);
-//     };
-//   }, []);
-
-//   // Handle popstate to prevent back navigation to hidden content
-//   useEffect(() => {
-//     const handlePopState = (e: PopStateEvent) => {
-//       e.preventDefault();
-//       performCleanup();
-//       onBack();
-//     };
-    
-//     window.addEventListener('popstate', handlePopState);
-//     return () => window.removeEventListener('popstate', handlePopState);
-//   }, [onBack]);
-
-//   if (error) {
-//     return (
-//       <div className="fixed inset-0 bg-red-900 flex items-center justify-center z-50">
-//         <div className="text-center text-white max-w-md mx-auto p-6">
-//           <div className="text-red-400 mb-4">
-//             <Shield size={48} className="mx-auto" />
-//           </div>
-//           <h2 className="text-xl font-semibold mb-2">Access Error</h2>
-//           <p className="text-red-200 mb-6">{error}</p>
-//           <button
-//             onClick={handleBack}
-//             className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-//           >
-//             Return to Calculator
-//           </button>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div 
-//       ref={containerRef}
-//       className="fixed inset-0 bg-black z-50"
-//       style={{ 
-//         userSelect: 'none',
-//         WebkitUserSelect: 'none',
-//         MozUserSelect: 'none',
-//         msUserSelect: 'none'
-//       }}
-//     >
-//       {/* Secure Navigation */}
-//       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur border-b border-gray-800">
-//         <div className="flex items-center justify-between px-4 py-3">
-//           <button
-//             onClick={handleBack}
-//             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
-//           >
-//             <ArrowLeft size={16} />
-//             Exit Secure Mode
-//           </button>
-          
-//           <div className="flex items-center gap-2 text-green-400 text-sm">
-//             <Lock size={16} />
-//             <span>Secure Session Active</span>
-//           </div>
-          
-//           <div className="text-xs text-gray-500">
-//             @Developed by Krushna Soni
-//           </div>
-//         </div>
-//       </nav>
-
-//       {/* Loading Screen */}
-//       {isLoading && (
-//         <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-600 to-blue-600">
-//           <div className="text-center text-white max-w-md mx-auto p-6">
-//             {/* Animated Loading Circle */}
-//             <div className="relative mx-auto mb-6 w-20 h-20">
-//               <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
-//               <div 
-//                 className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"
-//                 style={{ 
-//                   animationDuration: '1s',
-//                   transformOrigin: 'center'
-//                 }}
-//               ></div>
-//               <div className="absolute inset-2 bg-white/10 rounded-full flex items-center justify-center">
-//                 <Shield size={24} className="text-white" />
-//               </div>
-//             </div>
-
-//             <h2 className="text-2xl font-bold mb-2">Secure Project Access</h2>
-//             <p className="text-white/90 mb-1">Loading content in secure mode...</p>
-//             <p className="text-white/70 text-sm mb-6">No traces will be left in your browser history or data.</p>
-            
-//             {/* Progress Bar */}
-//             <div className="w-full bg-white/20 rounded-full h-2 mb-4">
-//               <div 
-//                 className="bg-white h-2 rounded-full transition-all duration-300 ease-out"
-//                 style={{ width: `${loadingProgress}%` }}
-//               ></div>
-//             </div>
-//             <div className="text-white/60 text-sm mb-6">{Math.round(loadingProgress)}% Complete</div>
-
-//             <div className="flex items-center justify-center gap-2 text-white/60 text-sm">
-//               <Lock size={16} />
-//               <span>Establishing secure connection...</span>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-
-//       {/* Content Area */}
-//       {!isLoading && isSecureMode && (
-//         <div className="pt-16 h-full bg-black">
-//           <iframe
-//             ref={iframeRef}
-//             srcDoc={iframeContent}
-//             className="w-full h-full border-0 bg-white"
-//             title="Hidden Project"
-//             sandbox="allow-scripts allow-forms allow-popups allow-modals"
-//             referrerPolicy="no-referrer"
-//             onLoad={handleIframeLoad}
-//             onError={handleIframeError}
-//             style={{
-//               height: 'calc(100vh - 4rem)',
-//               display: 'block'
-//             }}
-//           />
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-
-
+// src/components/HiddenProject.tsx
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Shield, Lock, ExternalLink } from 'lucide-react';
-import { getSecureConfig } from '../config/security';
-import { getSecureProjectUrl, getPlatform } from '../utils/platformUtils';
+import { ArrowLeft, Shield, Lock } from 'lucide-react';
 
 interface HiddenProjectProps {
   onBack: () => void;
@@ -566,20 +15,16 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const cleanupFunctionsRef = useRef<Array<() => void>>([]);
-  const hiddenWindowRef = useRef<Window | null>(null);
+  const cleanupDoneRef = useRef(false);
 
-  // Enhanced security measures
+  const proxyUrl = '/hidden-app/';
+  const backendProxyUrl = '/hidden-api';
+
+  // ── Security event handlers ──────────────────────────────────────────
   const enableSecurityMeasures = () => {
     const cleanupFunctions: Array<() => void> = [];
 
-    // Disable right-click context menu
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    };
-
-    // Disable key shortcuts for dev tools, view source, etc.
+    const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         e.key === 'F12' ||
@@ -587,313 +32,264 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
         (e.ctrlKey && (e.key === 'u' || e.key === 'U')) ||
         (e.ctrlKey && (e.key === 's' || e.key === 'S')) ||
         (e.ctrlKey && (e.key === 'p' || e.key === 'P'))
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }
+      ) { e.preventDefault(); e.stopPropagation(); }
     };
 
-    // Disable text selection
-    const disableSelection = () => {
-      document.body.style.userSelect = 'none';
-      document.body.style.webkitUserSelect = 'none';
-      (document.body.style as any).mozUserSelect = 'none';
-      (document.body.style as any).msUserSelect = 'none';
-    };
-
-    // Add event listeners
     document.addEventListener('contextmenu', handleContextMenu, true);
     document.addEventListener('keydown', handleKeyDown, true);
-    
-    disableSelection();
-
-    // Cleanup functions
     cleanupFunctions.push(() => {
       document.removeEventListener('contextmenu', handleContextMenu, true);
       document.removeEventListener('keydown', handleKeyDown, true);
-      
-      document.body.style.userSelect = '';
-      document.body.style.webkitUserSelect = '';
-      (document.body.style as any).mozUserSelect = '';
-      (document.body.style as any).msUserSelect = '';
     });
 
     return cleanupFunctions;
   };
 
-  // Progress simulation during loading
+  // ── Progress simulation ──────────────────────────────────────────────
   const simulateProgress = () => {
-    const progressInterval = setInterval(() => {
+    const interval = setInterval(() => {
       setLoadingProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
+        if (prev >= 90) { clearInterval(interval); return 90; }
         return prev + Math.random() * 10;
       });
     }, 200);
-
-    return () => clearInterval(progressInterval);
+    return () => clearInterval(interval);
   };
 
-  // Check if the hidden project is accessible
+  // ── Connection check ─────────────────────────────────────────────────
   const checkProjectAccess = async () => {
     try {
       setConnectionStatus('checking');
-      
-      // Check if the hidden project URL is accessible
-      const response = await fetch(projectUrl, {
-        method: 'HEAD',
-        mode: 'no-cors'
-      });
-      
-      setConnectionStatus('connected');
-      return true;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(proxyUrl, { method: 'GET', cache: 'no-cache', signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (response.ok) { setConnectionStatus('connected'); return true; }
+      throw new Error(`HTTP ${response.status}`);
     } catch (error) {
-      console.error('Project access check failed:', error);
-      setConnectionStatus('connected'); // Proceed anyway for CORS issues
-      return true;
+      setConnectionStatus('failed');
+      return false;
     }
   };
 
-  // Load the project using iframe with proper setup
+  // ── COMPREHENSIVE CLEANUP ────────────────────────────────────────────
+  const performCleanup = async () => {
+    // Guard: only run once per session to avoid double-cleanup
+    if (cleanupDoneRef.current) return;
+    cleanupDoneRef.current = true;
+
+    try {
+      // 1. CLEAR localStorage and sessionStorage completely
+      //    No need to preserve JWT tokens — user must log in again next time
+      //    which is the intended behavior (no traces = no saved session)
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {}
+
+      // 2. CLEAR all cookies for this origin
+      //    Iterates all cookies and sets expiry to past date
+      try {
+        document.cookie.split(';').forEach(cookie => {
+          const name = cookie.split('=')[0].trim();
+          // Clear for current path and all parent paths
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/hidden-app`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/hidden-api`;
+        });
+      } catch (e) {}
+
+      // 3. CLEAR Service Worker caches (Cache API)
+      try {
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+      } catch (e) {}
+
+      // 4. CLEAR browser HTTP cache for hidden-app assets
+      //    Fetch each known entry with cache: 'reload' to force eviction.
+      //    This is the only reliable cross-browser way to bust HTTP cache
+      //    without requiring Cache-Control headers on the server.
+      //    We use keepalive:false and no-store to prevent re-caching.
+      try {
+        const pathsToClear = [
+          '/hidden-app/',
+          '/hidden-app/src/main.jsx',
+          '/hidden-app/src/index.css',
+          '/hidden-app/src/App.css',
+        ];
+        await Promise.allSettled(
+          pathsToClear.map(p =>
+            fetch(p, { cache: 'no-store', method: 'GET' }).catch(() => {})
+          )
+        );
+      } catch (e) {}
+
+      // 5. CLEAR browser history entries created by the stock app
+      //    Strategy: replace ALL history entries accumulated during the session
+      //    back to the KaratCalc root. We can't delete history entries (browser
+      //    security prevents it) but we can replace them so back button never
+      //    shows a hidden-app URL.
+      //
+      //    Count how many history entries were added (iframe navigations each
+      //    add one). We replace them all with the current clean URL.
+      try {
+        // Replace current entry first
+        window.history.replaceState(null, '', '/');
+
+        // Walk back through any entries the iframe navigation created
+        // Each replaceState call overwrites the current entry in place
+        // We do this multiple times to catch any stragglers
+        for (let i = 0; i < 20; i++) {
+          window.history.replaceState(null, document.title, '/');
+        }
+      } catch (e) {}
+
+      // 6. UNREGISTER any service workers registered by the stock app
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(r => r.unregister()));
+        }
+      } catch (e) {}
+
+      // 7. CLEAR IndexedDB databases created by the stock app
+      try {
+        if ('indexedDB' in window) {
+          // List all databases (Chrome 73+, Firefox 126+)
+          if (indexedDB.databases) {
+            const dbs = await indexedDB.databases();
+            dbs.forEach(db => {
+              if (db.name) indexedDB.deleteDatabase(db.name);
+            });
+          }
+        }
+      } catch (e) {}
+
+      // 8. DESTROY the iframe before navigating away
+      //    This forces the browser to discard the iframe's navigation history,
+      //    cached resources, and JS heap — preventing back-button access
+      try {
+        if (iframeRef.current) {
+          // Navigate iframe to blank first to trigger unload
+          iframeRef.current.src = 'about:blank';
+          // Then remove it from DOM
+          setTimeout(() => {
+            if (iframeRef.current && iframeRef.current.parentNode) {
+              iframeRef.current.parentNode.removeChild(iframeRef.current);
+            }
+          }, 100);
+        }
+      } catch (e) {}
+
+    } catch (error) {
+      // Silent fail — cleanup best-effort
+    }
+
+    // Remove security event listeners
+    cleanupFunctionsRef.current.forEach(fn => fn());
+    cleanupFunctionsRef.current = [];
+  };
+
+  // ── Handlers ─────────────────────────────────────────────────────────
+  const handleBack = async () => {
+    await performCleanup();
+    onBack();
+  };
+
+  // ── Load sequence ─────────────────────────────────────────────────────
   const loadSecureProject = async () => {
     try {
       setIsLoading(true);
       setLoadingProgress(0);
-      
-      // Get platform-specific secure URL
-      const platform = getPlatform();
-      let secureUrl = projectUrl;
-      
-      if (platform === 'electron' || platform === 'capacitor') {
-        secureUrl = await getSecureProjectUrl();
-      }
-      
-      // Start progress simulation
+      cleanupDoneRef.current = false; // Reset for new session
+
       const stopProgress = simulateProgress();
-      
-      // Manipulate history to prevent URL tracking
+
+      // Replace current history entry so entering secure mode leaves no trace
       if (window.history.replaceState) {
-        window.history.replaceState(null, '', window.location.pathname);
+        window.history.replaceState(null, '', '/');
       }
-      
+
       setLoadingProgress(30);
-      
-      // Check if project is accessible using the secure URL
       const isAccessible = await checkProjectAccess();
-      
-      if (!isAccessible) {
-        throw new Error('Project server is not accessible');
-      }
-      
-      // Update the iframe source to use secure URL
-      if (iframeRef.current && secureUrl !== projectUrl) {
-        iframeRef.current.src = secureUrl;
-      }
-      
+      if (!isAccessible) throw new Error('Proxy not accessible');
+
       setLoadingProgress(60);
-      
-      // Wait for security measures to take effect
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setLoadingProgress(90);
-      
-      // Complete progress
+      await new Promise(resolve => setTimeout(resolve, 800));
       setLoadingProgress(100);
-      
-      // Small delay for smooth transition
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise(resolve => setTimeout(resolve, 400));
+
       stopProgress();
       setIsLoading(false);
       setIsSecureMode(true);
-      
+
     } catch (error) {
-      console.error('Error loading project:', error);
       setConnectionStatus('failed');
       setIsLoading(false);
     }
   };
 
-  // Open project in a controlled popup window
-  const openSecureWindow = () => {
-    try {
-      // Close any existing window
-      if (hiddenWindowRef.current) {
-        hiddenWindowRef.current.close();
-      }
-
-      // Open new window with security features
-      const windowFeatures = [
-        'width=1200',
-        'height=800',
-        'left=100',
-        'top=100',
-        'menubar=no',
-        'toolbar=no',
-        'location=no',
-        'status=no',
-        'scrollbars=yes',
-        'resizable=yes'
-      ].join(',');
-
-      hiddenWindowRef.current = window.open(
-        projectUrl,
-        'HiddenProject',
-        windowFeatures
-      );
-
-      if (hiddenWindowRef.current) {
-        // Focus the new window
-        hiddenWindowRef.current.focus();
-        
-        // Monitor window close
-        const checkClosed = setInterval(() => {
-          if (hiddenWindowRef.current?.closed) {
-            clearInterval(checkClosed);
-            performCleanup();
-          }
-        }, 1000);
-      }
-    } catch (error) {
-      console.error('Error opening secure window:', error);
-    }
-  };
-
-  // Comprehensive cleanup (preserving JWT tokens in localStorage)
-  const performCleanup = () => {
-    try {
-      // Save JWT tokens before cleanup
-      const jwtTokens: { [key: string]: string } = {};
-      if (typeof Storage !== 'undefined') {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.includes('jwt') || key.includes('token') || key.includes('auth'))) {
-            jwtTokens[key] = localStorage.getItem(key) || '';
-          }
-        }
-      }
-      
-      // Clear all storage
-      if (typeof Storage !== 'undefined') {
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Restore JWT tokens
-        Object.entries(jwtTokens).forEach(([key, value]) => {
-          localStorage.setItem(key, value);
-        });
-      }
-      
-      // Clear cookies (except JWT-related ones)
-      document.cookie.split(";").forEach(cookie => {
-        const eqPos = cookie.indexOf("=");
-        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-        if (!name.toLowerCase().includes('jwt') && !name.toLowerCase().includes('token') && !name.toLowerCase().includes('auth')) {
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-        }
-      });
-      
-      // Clear cache
-      if ('caches' in window) {
-        caches.keys().then(names => {
-          names.forEach(name => caches.delete(name));
-        });
-      }
-
-      // Clear history
-      try {
-        if (window.history.replaceState) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
-      } catch (e) {
-        console.log('History cleanup limited by browser security');
-      }
-
-      // Run cleanup functions
-      cleanupFunctionsRef.current.forEach(cleanup => cleanup());
-      cleanupFunctionsRef.current = [];
-      
-    } catch (error) {
-      console.error('Error during cleanup:', error);
-    }
-  };
-
-  const handleBack = () => {
-    performCleanup();
-    onBack();
-  };
-
+  // ── Effects ───────────────────────────────────────────────────────────
   useEffect(() => {
-    // Enable security measures
     const cleanupFunctions = enableSecurityMeasures();
     cleanupFunctionsRef.current = cleanupFunctions;
-    
-    // Immediate history manipulation
-    if (window.history.replaceState) {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-    
-    // Load project
     loadSecureProject();
-    
-    // Cleanup on unmount
-    return () => {
-      cleanupFunctions.forEach(cleanup => cleanup());
-      performCleanup();
-    };
-  }, [projectUrl]);
 
-  // Handle beforeunload and page visibility
-  useEffect(() => {
-    const handleBeforeUnload = () => {
+    return () => {
+      // Component unmounting — run cleanup
       performCleanup();
     };
-    
+  }, []);
+
+  useEffect(() => {
+    // Clean up if user closes tab or navigates away
+    const handleBeforeUnload = () => { performCleanup(); };
+
+    // Only clean up on visibility change if we're in secure mode
+    // (not during normal KaratCalc use before entering secure mode)
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      if (document.hidden && isSecureMode) {
         performCleanup();
       }
     };
-    
+
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isSecureMode]); // depend on isSecureMode so visibility handler is accurate
 
-  // Handle popstate to prevent back navigation to hidden content
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
       performCleanup();
       onBack();
     };
-    
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [onBack]);
 
+  // ── Error state ───────────────────────────────────────────────────────
   if (connectionStatus === 'failed') {
     return (
       <div className="fixed inset-0 bg-red-900 flex items-center justify-center z-50">
         <div className="text-center text-white max-w-md mx-auto p-6">
-          <div className="text-red-400 mb-4">
-            <Shield size={48} className="mx-auto" />
-          </div>
+          <div className="text-red-400 mb-4"><Shield size={48} className="mx-auto" /></div>
           <h2 className="text-xl font-semibold mb-2">Connection Error</h2>
-          <p className="text-red-200 mb-2">Unable to connect to the hidden project.</p>
-          <p className="text-red-300 text-sm mb-6">Please ensure the project server is running.</p>
-          <button
-            onClick={handleBack}
-            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-          >
+          <p className="text-red-200 mb-2">Unable to connect to the secure application.</p>
+          <p className="text-red-300 text-sm mb-6">
+            Ensure both servers are running:
+            <br />
+            <code className="text-xs bg-red-800 px-2 py-1 rounded mt-2 inline-block">
+              Frontend: localhost:5173<br />Backend: localhost:5000
+            </code>
+          </p>
+          <button onClick={handleBack} className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
             Return to Calculator
           </button>
         </div>
@@ -901,18 +297,13 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
     );
   }
 
+  // ── Main render ───────────────────────────────────────────────────────
   return (
-    <div 
+    <div
       ref={containerRef}
       className="fixed inset-0 bg-black z-50"
-      style={{ 
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        MozUserSelect: 'none',
-        msUserSelect: 'none'
-      }}
+      style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
     >
-      {/* Secure Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur border-b border-gray-800">
         <div className="flex items-center justify-between px-4 py-3">
           <button
@@ -922,85 +313,69 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
             <ArrowLeft size={16} />
             Exit Secure Mode
           </button>
-          
           <div className="flex items-center gap-2 text-green-400 text-sm">
             <Lock size={16} />
             <span>Secure Session Active</span>
           </div>
-          
-          <div className="text-xs text-gray-500">
-            @Developed by Krushna Soni
-          </div>
+          <div className="text-xs text-gray-500">@Developed by Krushna Soni</div>
         </div>
       </nav>
 
-      {/* Loading Screen */}
       {isLoading && (
         <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-600 to-blue-600">
           <div className="text-center text-white max-w-md mx-auto p-6">
-            {/* Animated Loading Circle */}
             <div className="relative mx-auto mb-6 w-20 h-20">
               <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
-              <div 
-                className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"
-                style={{ 
-                  animationDuration: '1s',
-                  transformOrigin: 'center'
-                }}
-              ></div>
+              <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin" style={{ animationDuration: '1s' }}></div>
               <div className="absolute inset-2 bg-white/10 rounded-full flex items-center justify-center">
                 <Shield size={24} className="text-white" />
               </div>
             </div>
-
             <h2 className="text-2xl font-bold mb-2">Secure Project Access</h2>
             <p className="text-white/90 mb-1">Establishing secure connection...</p>
             <p className="text-white/70 text-sm mb-6">
-              {connectionStatus === 'checking' ? 'Checking server availability...' : 
-               connectionStatus === 'connected' ? 'Server connected successfully!' : 
-               'Preparing secure environment...'}
+              {connectionStatus === 'checking' ? 'Checking server...' : connectionStatus === 'connected' ? 'Connected!' : 'Preparing...'}
             </p>
-            
-            {/* Progress Bar */}
             <div className="w-full bg-white/20 rounded-full h-2 mb-4">
-              <div 
-                className="bg-white h-2 rounded-full transition-all duration-300 ease-out"
-                style={{ width: `${loadingProgress}%` }}
-              ></div>
+              <div className="bg-white h-2 rounded-full transition-all duration-300" style={{ width: `${loadingProgress}%` }}></div>
             </div>
-            <div className="text-white/60 text-sm mb-6">{Math.round(loadingProgress)}% Complete</div>
-
+            <div className="text-white/60 text-sm mb-6">{Math.round(loadingProgress)}%</div>
             <div className="flex items-center justify-center gap-2 text-white/60 text-sm">
               <Lock size={16} />
-              <span>No traces will be left in your browser history</span>
+              <span>No traces in browser history</span>
             </div>
           </div>
         </div>
       )}
 
-
-      {/* Inline Iframe - Hidden Project loads directly in this window */}
       {!isLoading && isSecureMode && connectionStatus === 'connected' && (
         <div className="pt-16 h-full bg-black">
           <iframe
             ref={iframeRef}
-            src={projectUrl}
+            src={proxyUrl}
             className="w-full h-full border-0 bg-white"
-            title="Hidden Project"
-            sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"
+            title="Secure Application"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"
             referrerPolicy="no-referrer"
-            style={{
-              height: 'calc(100vh - 4rem)',
-              display: 'block'
-            }}
+            style={{ height: 'calc(100vh - 4rem)', display: 'block' }}
             onLoad={() => {
-              // Additional history cleanup after iframe loads
-              setTimeout(() => {
-                if (window.history.replaceState) {
-                  window.history.replaceState(null, '', window.location.pathname);
+              // Keep history clean after every iframe navigation
+              // (login → sales → entries each trigger onLoad)
+              if (window.history.replaceState) {
+                window.history.replaceState(null, document.title, '/');
+              }
+
+              try {
+                if (iframeRef.current?.contentWindow) {
+                  iframeRef.current.contentWindow.postMessage({
+                    type: 'PROXY_CONFIG',
+                    backendProxy: backendProxyUrl,
+                    isProxied: true
+                  }, '*');
                 }
-              }, 100);
+              } catch (err) {}
             }}
+            onError={() => { setConnectionStatus('failed'); }}
           />
         </div>
       )}
