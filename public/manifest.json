@@ -1,27 +1,28 @@
 {
-  "name": "Gold Calculator Pro",
-  "short_name": "Gold Calc",
+  "name": "KaratCalc",
+  "short_name": "KaratCalc",
   "description": "Professional calculator with gold karat conversion",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
+  "background_color": "#d4af37",
   "theme_color": "#d4af37",
-  "orientation": "portrait",
-  "scope": "/",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/favicon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
     },
     {
-      "src": "/placeholder.svg",
-      "type": "image/svg+xml",
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "categories": ["productivity", "utilities"],
-  "lang": "en",
-  "dir": "ltr"
+  ]
 }

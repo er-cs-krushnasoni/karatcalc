@@ -23,7 +23,6 @@ KARAT-GEM-VALUE-FINDER/
 │   │   ├── Calculator.tsx
 │   │   ├── HiddenProject.tsx
 │   │   ├── PlatformWrapper.tsx
-│   │   ├── ProxyInitializer.tsx
 │   │   └── SecureFrame.tsx
 │   ├── config/
 │   │   ├── platform-security.ts
@@ -37,8 +36,6 @@ KARAT-GEM-VALUE-FINDER/
 │   ├── pages/
 │   │   ├── Index.tsx
 │   │   └── NotFound.tsx
-│   ├── services/
-│   │   └── secureProxy.ts
 │   ├── utils/
 │   │   ├── consoleSuppressor.ts
 │   │   └── platformUtils.ts
@@ -51,7 +48,7 @@ KARAT-GEM-VALUE-FINDER/
 ├── bun.lockb
 ├── capacitor.config.ts
 ├── components.json
-├── electron.config.js
+├── electron.config.cjs
 ├── eslint.config.js
 ├── index.html
 ├── package-lock.json

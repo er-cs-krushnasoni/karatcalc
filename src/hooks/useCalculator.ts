@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { getSecureConfig } from '../config/security';
 
 interface CalculatorState {
@@ -13,316 +13,239 @@ interface CalculatorState {
 }
 
 const initialState: CalculatorState = {
-  display: '0',
-  expression: '',
-  previousValue: '',
-  operation: '',
-  waitingForNumber: false,
-  isError: false,
-  isHidden: false,
-  triggerSequence: ''
+  display: '0', expression: '', previousValue: '',
+  operation: '', waitingForNumber: false,
+  isError: false, isHidden: false, triggerSequence: ''
 };
+
+const isElectron = () =>
+  typeof window !== 'undefined' &&
+  window.navigator.userAgent.toLowerCase().includes('electron');
+
+const isElectronProd = () =>
+  isElectron() && window.location.protocol === 'file:';
+
+const isCapacitor = () =>
+  typeof window !== 'undefined' &&
+  typeof (window as any).Capacitor !== 'undefined';
 
 export const useCalculator = () => {
   const [state, setState] = useState<CalculatorState>(initialState);
+  const isHiddenRef = useRef(false);
 
-  const resetCalculator = useCallback(() => {
-    setState(initialState);
+  // ── Capacitor back button ─────────────────────────────────────────────
+  useEffect(() => {
+    let capacitorListener: any = null;
+    const setupBackHandler = async () => {
+      try {
+        const { App } = await import('@capacitor/app');
+        capacitorListener = await App.addListener('backButton', () => {
+          if (!isHiddenRef.current) App.minimizeApp();
+        });
+      } catch { /* web/electron */ }
+    };
+    setupBackHandler();
+    return () => { if (capacitorListener?.remove) capacitorListener.remove(); };
   }, []);
 
   const setError = useCallback((errorMessage: string) => {
-    setState(prev => ({
-      ...prev,
-      display: errorMessage,
-      isError: true,
-      expression: ''
-    }));
+    setState(prev => ({ ...prev, display: errorMessage, isError: true, expression: '' }));
+  }, []);
+
+  const openSecureWindow = useCallback(() => {
+    isHiddenRef.current = true;
+    setState(prev => ({ ...prev, isHidden: true, display: '0' }));
   }, []);
 
   const checkTriggerSequence = useCallback((newSequence: string) => {
     const config = getSecureConfig();
-    if (newSequence === config.triggerSequence) {
-      // Check if we're online
-      if (!navigator.onLine) {
-        setError('ERROR');
-        return;
-      }
-      
-      // Check if project URL is reachable
-      fetch(config.projectUrl, { 
-        method: 'HEAD',
-        mode: 'no-cors',
-        cache: 'no-cache'
-      })
-      .then(() => {
-        setState(prev => ({ ...prev, isHidden: true }));
-      })
-      .catch(() => {
-        setError('ERROR');
-      });
-    } else if (newSequence.length >= config.triggerSequence.length) {
-      setError('ERROR');
+    if (newSequence !== config.triggerSequence) {
+      if (newSequence.length >= config.triggerSequence.length) setError('ERROR');
+      return;
     }
-  }, [setError]);
+
+    if (!isCapacitor() && !navigator.onLine) { setError('ERROR'); return; }
+
+    // ── Electron production (.exe, file:// protocol) ───────────────────
+    // Use IPC checkServer (Node.js http.get) — reliable unlike browser fetch
+    if (isElectronProd()) {
+      const electronAPI = (window as any).electronAPI;
+      if (!electronAPI?.checkServer) { setError('ERROR'); return; }
+
+      electronAPI.checkServer('http://localhost:8080')
+        .then((reachable: boolean) => {
+          if (reachable) {
+            openSecureWindow();
+          } else {
+            setError('ERROR');
+          }
+        })
+        .catch(() => setError('ERROR'));
+      return;
+    }
+
+    // ── Capacitor (Android) ───────────────────────────────────────────
+if (isCapacitor()) {
+  import('@capacitor/core').then(({ CapacitorHttp }) => {
+    CapacitorHttp.request({
+      method: 'GET',
+      url: config.checkUrl,
+      headers: { 'Accept': '*/*' },
+    })
+      .then((response) => {
+        if (response.status >= 200 && response.status < 500) {
+          openSecureWindow();
+        } else {
+          setError('ERROR');
+        }
+      })
+      .catch(() => setError('ERROR'));
+  }).catch(() => setError('ERROR'));
+  return;
+}
+
+    // ── Web browser ────────────────────────────────────────────────────
+    fetch(config.checkUrl, { method: 'HEAD', cache: 'no-cache' })
+      .then(() => openSecureWindow())
+      .catch(() => setError('ERROR'));
+
+  }, [setError, openSecureWindow]);
 
   const handleNumberClick = useCallback((number: string) => {
     setState(prev => {
       if (prev.isError) return prev;
-      
-      const newTriggerSequence = prev.triggerSequence + number;
-      
+      const newTrigger = prev.triggerSequence + number;
       if (prev.waitingForNumber) {
-        const newDisplay = number;
-        const newExpression = prev.expression + number;
-        return {
-          ...prev,
-          display: newDisplay,
-          expression: newExpression,
-          waitingForNumber: false,
-          triggerSequence: newTriggerSequence
-        };
-      } else {
-        const newDisplay = prev.display === '0' ? number : prev.display + number;
-        const newExpression = prev.expression + number;
-        return {
-          ...prev,
-          display: newDisplay,
-          expression: newExpression,
-          triggerSequence: newTriggerSequence
-        };
+        return { ...prev, display: number, expression: prev.expression + number,
+                 waitingForNumber: false, triggerSequence: newTrigger };
       }
+      return { ...prev,
+               display: prev.display === '0' ? number : prev.display + number,
+               expression: prev.expression + number, triggerSequence: newTrigger };
     });
   }, []);
 
   const handleOperatorClick = useCallback((operator: string) => {
     setState(prev => {
       if (prev.isError) return prev;
-      
-      const newTriggerSequence = prev.triggerSequence + operator;
-      
+      const newTrigger = prev.triggerSequence + operator;
       if (prev.operation && !prev.waitingForNumber) {
         try {
           const result = calculate(prev.previousValue, prev.display, prev.operation);
-          const newExpression = prev.expression + operator;
-          
-          return {
-            ...prev,
-            display: result.toString(),
-            expression: newExpression,
-            previousValue: result.toString(),
-            operation: operator,
-            waitingForNumber: true,
-            triggerSequence: newTriggerSequence
-          };
-        } catch (error) {
-          // Handle division by zero or other calculation errors
-          return {
-            ...prev,
-            display: 'Error',
-            expression: '',
-            operation: '',
-            previousValue: '',
-            waitingForNumber: false,
-            isError: true,
-            triggerSequence: ''
-          };
+          return { ...prev, display: result.toString(),
+                   expression: prev.expression + operator,
+                   previousValue: result.toString(), operation: operator,
+                   waitingForNumber: true, triggerSequence: newTrigger };
+        } catch {
+          return { ...prev, display: 'Error', expression: '', operation: '',
+                   previousValue: '', waitingForNumber: false,
+                   isError: true, triggerSequence: '' };
         }
-      } else {
-        const newExpression = prev.expression + operator;
-        return {
-          ...prev,
-          previousValue: prev.display,
-          operation: operator,
-          expression: newExpression,
-          waitingForNumber: true,
-          triggerSequence: newTriggerSequence
-        };
       }
+      return { ...prev, previousValue: prev.display, operation: operator,
+               expression: prev.expression + operator,
+               waitingForNumber: true, triggerSequence: newTrigger };
     });
   }, []);
 
   const handleEqualsClick = useCallback(() => {
     setState(prev => {
       if (prev.isError) return prev;
-      
-      const newTriggerSequence = prev.triggerSequence + '=';
-      
+      const newTrigger = prev.triggerSequence + '=';
       if (prev.operation && prev.previousValue) {
         try {
           const result = calculate(prev.previousValue, prev.display, prev.operation);
-          
-          // Check trigger sequence after calculation
-          setTimeout(() => checkTriggerSequence(newTriggerSequence), 0);
-          
-          return {
-            ...prev,
-            display: result.toString(),
-            expression: prev.expression + '=' + result.toString(),
-            operation: '',
-            previousValue: '',
-            waitingForNumber: false,
-            triggerSequence: newTriggerSequence
-          };
-        } catch (error) {
-          // For division by zero in the trigger sequence, we need special handling
           const config = getSecureConfig();
-          if (newTriggerSequence === config.triggerSequence) {
-            // Check trigger sequence even when calculation fails
-            setTimeout(() => checkTriggerSequence(newTriggerSequence), 0);
-            
-            return {
-              ...prev,
-              display: 'Error',
-              expression: prev.expression + '=Error',
-              operation: '',
-              previousValue: '',
-              waitingForNumber: false,
-              triggerSequence: newTriggerSequence
-            };
+          if (newTrigger === config.triggerSequence) {
+            setTimeout(() => checkTriggerSequence(newTrigger), 0);
           }
-          
-          // Handle other calculation errors
-          return {
-            ...prev,
-            display: 'Error',
-            expression: '',
-            operation: '',
-            previousValue: '',
-            waitingForNumber: false,
-            isError: true,
-            triggerSequence: ''
-          };
+          return { ...prev, display: result.toString(),
+                   expression: prev.expression + '=' + result.toString(),
+                   operation: '', previousValue: '', waitingForNumber: false,
+                   triggerSequence: '' };
+        } catch {
+          const config = getSecureConfig();
+          if (newTrigger === config.triggerSequence) {
+            setTimeout(() => checkTriggerSequence(newTrigger), 0);
+            return { ...prev, display: 'Error',
+                     expression: prev.expression + '=Error',
+                     operation: '', previousValue: '', waitingForNumber: false,
+                     triggerSequence: '' };
+          }
+          return { ...prev, display: 'Error', expression: '', operation: '',
+                   previousValue: '', waitingForNumber: false,
+                   isError: true, triggerSequence: '' };
         }
       }
-      
-      return {
-        ...prev,
-        triggerSequence: newTriggerSequence
-      };
+      return { ...prev, triggerSequence: newTrigger };
     });
   }, [checkTriggerSequence]);
 
   const handleBackspaceClick = useCallback(() => {
     setState(prev => {
       if (prev.isError) return prev;
-      
-      const newDisplay = prev.display.length > 1 ? prev.display.slice(0, -1) : '0';
-      const newExpression = prev.expression.length > 0 ? prev.expression.slice(0, -1) : '';
-      const newTriggerSequence = prev.triggerSequence.length > 0 ? prev.triggerSequence.slice(0, -1) : '';
-      
-      return {
-        ...prev,
-        display: newDisplay,
-        expression: newExpression,
-        triggerSequence: newTriggerSequence
-      };
+      return { ...prev,
+               display: prev.display.length > 1 ? prev.display.slice(0, -1) : '0',
+               expression: prev.expression.slice(0, -1),
+               triggerSequence: prev.triggerSequence.slice(0, -1) };
     });
   }, []);
 
   const handleAllClearClick = useCallback(() => {
-    setState(prev => ({
-      ...initialState,
-      isHidden: prev.isHidden
-    }));
+    isHiddenRef.current = false;
+    setState(initialState);
   }, []);
 
   const handleDecimalClick = useCallback(() => {
     setState(prev => {
-      if (prev.isError) return prev;
-      
-      if (prev.display.includes('.')) return prev;
-      
-      const newDisplay = prev.display + '.';
-      const newExpression = prev.expression + '.';
-      
-      return {
-        ...prev,
-        display: newDisplay,
-        expression: newExpression
-      };
+      if (prev.isError || prev.display.includes('.')) return prev;
+      return { ...prev, display: prev.display + '.', expression: prev.expression + '.' };
     });
   }, []);
 
   const handleGoldConversion = useCallback((karat: string) => {
     setState(prev => {
       if (prev.isError) return prev;
-      
       const value = parseFloat(prev.display);
       if (isNaN(value)) return prev;
-      
-      let purity: number;
-      switch (karat) {
-        case '18K':
-          purity = 0.75;
-          break;
-        case '20K':
-          purity = 0.8333;
-          break;
-        case '22K':
-          purity = 0.916;
-          break;
-        default:
-          return prev;
-      }
-      
-      const result = value * purity;
-      const formattedResult = parseFloat(result.toFixed(4)).toString();
-      
-      return {
-        ...prev,
-        display: formattedResult,
-        expression: `${prev.display}×${karat}=${formattedResult}`,
-        operation: '',
-        previousValue: '',
-        waitingForNumber: false,
-        triggerSequence: ''
-      };
+      const purities: Record<string, number> = { '18K': 0.75, '20K': 0.8333, '22K': 0.916 };
+      const purity = purities[karat];
+      if (!purity) return prev;
+      const result = parseFloat((value * purity).toFixed(4)).toString();
+      return { ...prev, display: result,
+               expression: `${prev.display}×${karat}=${result}`,
+               operation: '', previousValue: '', waitingForNumber: false,
+               triggerSequence: '' };
     });
   }, []);
 
   const handleBackClick = useCallback(() => {
-    setState(prev => ({ ...prev, isHidden: false }));
+    isHiddenRef.current = false;
+    setState(initialState);
   }, []);
 
   const setIsHidden = useCallback((hidden: boolean) => {
-    setState(prev => ({ ...prev, isHidden: hidden }));
+    isHiddenRef.current = hidden;
+    if (!hidden) setState(initialState);
+    else setState(prev => ({ ...prev, isHidden: true }));
   }, []);
 
   return {
-    display: state.display,
-    expression: state.expression,
-    isError: state.isError,
-    isHidden: state.isHidden,
-    handleNumberClick,
-    handleOperatorClick,
-    handleEqualsClick,
-    handleBackspaceClick,
-    handleAllClearClick,
-    handleDecimalClick,
-    handleGoldConversion,
-    handleBackClick,
-    setIsHidden
+    display: state.display, expression: state.expression,
+    isError: state.isError, isHidden: state.isHidden,
+    handleNumberClick, handleOperatorClick, handleEqualsClick,
+    handleBackspaceClick, handleAllClearClick, handleDecimalClick,
+    handleGoldConversion, handleBackClick, setIsHidden
   };
 };
 
-// Helper function to perform calculations
 const calculate = (a: string, b: string, operation: string): number => {
-  const numA = parseFloat(a);
-  const numB = parseFloat(b);
-  
+  const numA = parseFloat(a), numB = parseFloat(b);
   switch (operation) {
-    case '+':
-      return numA + numB;
-    case '-':
-      return numA - numB;
-    case '×':
-      return numA * numB;
-    case '÷':
-      if (numB === 0) {
-        throw new Error('Division by zero');
-      }
-      return numA / numB;
-    default:
-      return numB;
+    case '+': return numA + numB;
+    case '-': return numA - numB;
+    case '×': return numA * numB;
+    case '÷': if (numB === 0) throw new Error('Division by zero'); return numA / numB;
+    default: return numB;
   }
 };

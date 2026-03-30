@@ -1,7 +1,6 @@
-<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">karat-gem-value-finder</string>
-    <string name="title_activity_main">karat-gem-value-finder</string>
-    <string name="package_name">app.lovable.de78b4690d304e90aa365840fae24897</string>
-    <string name="custom_url_scheme">app.lovable.de78b4690d304e90aa365840fae24897</string>
+    <string name="app_name">KaratCalc</string>
+    <string name="title_activity_main">KaratCalc</string>
+    <string name="package_name">karatcalc</string>
+    <string name="custom_url_scheme">karatcalc</string>
 </resources>

@@ -1,18 +1,27 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.de78b4690d304e90aa365840fae24897',
-  appName: 'karat-gem-value-finder',
+  appId: 'com.jewellery.karatcalc',
+  appName: 'KaratCalc',
   webDir: 'dist',
+
   server: {
-    url: 'https://de78b469-0d30-4e90-aa36-5840fae24897.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    androidScheme: 'http',  // ← fixes mixed content: app now runs on http://localhost
   },
+
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 2500,
+      launchAutoHide: true,
       backgroundColor: '#d4af37',
-      showSpinner: false
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true
+    },
+    CapacitorHttp: {
+      enabled: true,
     },
     StatusBar: {
       style: 'dark',

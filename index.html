@@ -3,73 +3,68 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Karat CalC</title>
+    <title>KaratCalc</title>
     <meta name="description" content="Professional calculator with gold karat conversion" />
     <meta name="author" content="Krushna Soni" />
-    
-    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="KaratCalc" />
+
+    <!-- ── Favicons ─────────────────────────────────────────────── -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- ── PWA Meta Tags ────────────────────────────────────────── -->
     <meta name="theme-color" content="#d4af37" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Karat CalC" />
-    
-    <!-- Manifest -->
+    <meta name="apple-mobile-web-app-title" content="KaratCalc" />
+
+    <!-- ── Manifest ─────────────────────────────────────────────── -->
     <link rel="manifest" href="./manifest.json" />
 
-    <meta property="og:title" content="Karat CalC" />
+    <!-- ── OG / Social ──────────────────────────────────────────── -->
+    <meta property="og:title" content="KaratCalc" />
     <meta property="og:description" content="Professional calculator with gold karat conversion" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="/android-chrome-512x512.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:image" content="/android-chrome-512x512.png" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="./src/main.tsx"></script>
-    
-    <!-- Service Worker Registration - Only for web, not Electron -->
-    <!-- Add this script to your HIDER project's index.html, in the <head> section -->
 
-<script>
-  // Block console logs only when secure mode is active
-  window.blockConsoleWhenSecure = function() {
-    const noop = function() {};
-    const methods = [
-      'log', 'info', 'warn', 'debug', 'trace',
-      'dir', 'dirxml', 'table', 'group', 'groupEnd', 
-      'groupCollapsed', 'clear', 'count', 'countReset',
-      'time', 'timeEnd', 'timeLog', 'timeStamp',
-      'profile', 'profileEnd', 'assert'
-    ];
-    
-    methods.forEach(method => {
-      if (console[method]) {
-        console[method] = noop;
-      }
-    });
-    
-    // Keep errors for critical issues only
-    const originalError = console.error;
-    console.error = function(...args) {
-      const message = args.join(' ');
-      // Filter out non-critical errors
-      if (message.includes('Download the React DevTools') ||
-          message.includes('[vite]') ||
-          message.includes('SW registered')) {
-        return;
-      }
-      originalError.apply(console, args);
-    };
-  };
-  
-  window.restoreConsole = function() {
-    // This would need to store originals first to restore properly
-    location.reload(); // Simple way to restore
-  };
-</script>
+    <!-- Console blocker — active only in secure/production mode -->
+    <script>
+      window.blockConsoleWhenSecure = function() {
+        const noop = function() {};
+        const methods = [
+          'log', 'info', 'warn', 'debug', 'trace',
+          'dir', 'dirxml', 'table', 'group', 'groupEnd',
+          'groupCollapsed', 'clear', 'count', 'countReset',
+          'time', 'timeEnd', 'timeLog', 'timeStamp',
+          'profile', 'profileEnd', 'assert'
+        ];
+        methods.forEach(method => {
+          if (console[method]) console[method] = noop;
+        });
+        const originalError = console.error;
+        console.error = function(...args) {
+          const message = args.join(' ');
+          if (message.includes('Download the React DevTools') ||
+              message.includes('[vite]') ||
+              message.includes('SW registered')) return;
+          originalError.apply(console, args);
+        };
+      };
+
+      window.restoreConsole = function() {
+        location.reload();
+      };
+    </script>
   </body>
 </html>
