@@ -32,20 +32,6 @@ export const getSecureConfig = () => {
     };
   }
 
-  // if (isCapacitor()) {
-  //   // Capacitor (Android) — use LOCAL_IP from env baked at build time
-  //   const localIp = import.meta.env.VITE_CAPACITOR_LOCAL_IP ||
-  //                   import.meta.env.CAPACITOR_LOCAL_IP ||
-  //                   '192.168.31.32';
-  //   const karatCalcUrl = `http://${localIp}:8080`;
-  //   return {
-  //     projectUrl: `${karatCalcUrl}/hidden-app`,
-  //     backendUrl: '/hidden-api',
-  //     checkUrl: `${karatCalcUrl}/hidden-app`,
-  //     triggerSequence: _0x7g8h()
-  //   };
-  // }
-
   if (isCapacitor()) {
     const localIp = import.meta.env.VITE_CAPACITOR_LOCAL_IP ||
                     '192.168.31.32';
@@ -58,15 +44,14 @@ export const getSecureConfig = () => {
     };
   }
 
-  // Web browser
-  const frontendProxy = import.meta.env.VITE_FRONTEND_PROXY || '/hidden-app';
-  const backendProxy  = import.meta.env.VITE_BACKEND_PROXY  || '/hidden-api';
-  return {
-    projectUrl: frontendProxy,
-    backendUrl: backendProxy,
-    checkUrl: frontendProxy,
-    triggerSequence: _0x7g8h()
-  };
+ // Web browser — production
+const frontendProxy = import.meta.env.VITE_FRONTEND_PROXY || '/hidden-app';
+const backendProxy  = import.meta.env.VITE_BACKEND_PROXY  || '/hidden-api';
+return {
+  projectUrl: frontendProxy,
+  checkUrl: frontendProxy,
+  triggerSequence: _0x7g8h()
+};
 };
 
 export const getProjectConfig = () => {
