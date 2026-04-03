@@ -1,0 +1,2 @@
+/hidden-api/*  https://jewellery-stock-management.up.railway.app/:splat  200
+/hidden-app/*  https://jewellery-stock-management.netlify.app/:splat   200
