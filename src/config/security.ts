@@ -9,13 +9,15 @@ const isElectron = () =>
 
 const isCapacitor = () =>
   typeof window !== 'undefined' &&
-  typeof (window as any).Capacitor !== 'undefined';
+  typeof (window as any).Capacitor !== 'undefined' &&
+  (window as any).Capacitor.isNativePlatform?.();   // ← extra safety: only true on actual native app
 
 export const getSecureConfig = () => {
+
   if (isElectron()) {
     const prodFrontend = import.meta.env.VITE_HIDDEN_PROJECT_URL;
     if (prodFrontend && !prodFrontend.includes('localhost')) {
-      // Deployed version
+      // Deployed Electron version pointing to production
       return {
         projectUrl: prodFrontend,
         backendUrl: import.meta.env.VITE_HIDDEN_PROJECT_BACKEND_URL || '',
@@ -23,7 +25,7 @@ export const getSecureConfig = () => {
         triggerSequence: _0x7g8h()
       };
     }
-    // Both dev and prod local Electron — always localhost:8080/hidden-app
+    // Local Electron dev — always localhost:8080/hidden-app
     return {
       projectUrl: 'http://localhost:8080/hidden-app',
       backendUrl: '/hidden-api',
@@ -33,25 +35,29 @@ export const getSecureConfig = () => {
   }
 
   if (isCapacitor()) {
-    const localIp = import.meta.env.VITE_CAPACITOR_LOCAL_IP ||
-                    '192.168.31.32';
+    // Capacitor (Android) — use LOCAL_IP from env baked at build time
+    const localIp = import.meta.env.VITE_CAPACITOR_LOCAL_IP || '192.168.31.32';
     const karatCalcUrl = `http://${localIp}:8080`;
     return {
       projectUrl: `${karatCalcUrl}/hidden-app`,
       backendUrl: '/hidden-api',
-      checkUrl: karatCalcUrl,     // ← root only, simpler
+      checkUrl: karatCalcUrl,
       triggerSequence: _0x7g8h()
     };
   }
 
- // Web browser — production
-const frontendProxy = import.meta.env.VITE_FRONTEND_PROXY || '/hidden-app';
-const backendProxy  = import.meta.env.VITE_BACKEND_PROXY  || '/hidden-api';
-return {
-  projectUrl: frontendProxy,
-  checkUrl: frontendProxy,
-  triggerSequence: _0x7g8h()
-};
+  // Web browser — works for both local dev and production Netlify
+  // In production: VITE_FRONTEND_PROXY = full Site B Netlify URL
+  // In local dev:  VITE_FRONTEND_PROXY = /hidden-app (relative)
+  const frontendProxy = import.meta.env.VITE_FRONTEND_PROXY || '/hidden-app';
+  const backendProxy  = import.meta.env.VITE_BACKEND_PROXY  || '/hidden-api';
+  return {
+    projectUrl: frontendProxy,
+    backendUrl: backendProxy,
+    checkUrl: frontendProxy,
+    triggerSequence: _0x7g8h()
+  };
+
 };
 
 export const getProjectConfig = () => {
