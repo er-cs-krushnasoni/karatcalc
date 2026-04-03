@@ -1,3 +1,4 @@
+// src/hooks/useCalculator.ts
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { getSecureConfig } from '../config/security';
 
@@ -27,7 +28,8 @@ const isElectronProd = () =>
 
 const isCapacitor = () =>
   typeof window !== 'undefined' &&
-  typeof (window as any).Capacitor !== 'undefined';
+  typeof (window as any).Capacitor !== 'undefined' &&
+  (window as any).Capacitor.isNativePlatform?.();
 
 export const useCalculator = () => {
   const [state, setState] = useState<CalculatorState>(initialState);
@@ -64,47 +66,50 @@ export const useCalculator = () => {
       return;
     }
 
-    if (!isCapacitor() && !navigator.onLine) { setError('ERROR'); return; }
-
     // ── Electron production (.exe, file:// protocol) ───────────────────
-    // Use IPC checkServer (Node.js http.get) — reliable unlike browser fetch
+    // Uses IPC to check local server is running — internet not required
     if (isElectronProd()) {
       const electronAPI = (window as any).electronAPI;
       if (!electronAPI?.checkServer) { setError('ERROR'); return; }
-
       electronAPI.checkServer('http://localhost:8080')
         .then((reachable: boolean) => {
-          if (reachable) {
-            openSecureWindow();
-          } else {
-            setError('ERROR');
-          }
+          if (reachable) openSecureWindow();
+          else setError('ERROR');
         })
         .catch(() => setError('ERROR'));
       return;
     }
 
     // ── Capacitor (Android) ───────────────────────────────────────────
-if (isCapacitor()) {
-  import('@capacitor/core').then(({ CapacitorHttp }) => {
-    CapacitorHttp.request({
-      method: 'GET',
-      url: config.checkUrl,
-      headers: { 'Accept': '*/*' },
-    })
-      .then((response) => {
-        if (response.status >= 200 && response.status < 500) {
-          openSecureWindow();
-        } else {
-          setError('ERROR');
-        }
-      })
-      .catch(() => setError('ERROR'));
-  }).catch(() => setError('ERROR'));
-  return;
-}
+    // Requires internet to reach the backend — show ERROR if offline
+    if (isCapacitor()) {
+      if (!navigator.onLine) { setError('ERROR'); return; }
+      import('@capacitor/core').then(({ CapacitorHttp }) => {
+        CapacitorHttp.request({
+          method: 'GET',
+          url: config.checkUrl,
+          headers: { 'Accept': '*/*' },
+        })
+          .then((response) => {
+            if (response.status >= 200 && response.status < 500) openSecureWindow();
+            else setError('ERROR');
+          })
+          .catch(() => setError('ERROR'));
+      }).catch(() => setError('ERROR'));
+      return;
+    }
 
-    // ── Web browser ────────────────────────────────────────────────────
+    // ── Web browser production (Netlify) ──────────────────────────────
+    // Cross-origin fetch to another Netlify site is CORS blocked, so we
+    // rely on navigator.onLine — show ERROR if offline, open if online
+    if (import.meta.env.PROD) {
+      if (!navigator.onLine) { setError('ERROR'); return; }
+      openSecureWindow();
+      return;
+    }
+
+    // ── Web browser local dev ─────────────────────────────────────────
+    // Check the local dev server is actually running via fetch
     fetch(config.checkUrl, { method: 'HEAD', cache: 'no-cache' })
       .then(() => openSecureWindow())
       .catch(() => setError('ERROR'));
