@@ -12,6 +12,9 @@ const isElectron = () =>
   typeof window !== 'undefined' &&
   window.navigator.userAgent.toLowerCase().includes('electron');
 
+const isCapacitor = () =>
+  typeof window !== 'undefined' && !!(window as any).Capacitor;
+
 export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSecureMode, setIsSecureMode] = useState(false);
@@ -19,14 +22,15 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'failed'>('checking');
   const [iframeLoading, setIframeLoading] = useState(true);
   const [navHeight, setNavHeight] = useState(56);
+  const [safeAreaTop, setSafeAreaTop] = useState(0);
+  const [safeAreaBottom, setSafeAreaBottom] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const isMountedRef = useRef(true);
   const hasExitedRef = useRef(false);
 
-  // Always get fresh config
   const config = getSecureConfig();
-  const proxyUrl      = config.projectUrl;
+  const proxyUrl = config.projectUrl;
   const backendProxyUrl = config.backendUrl;
 
   // ── Track mount ───────────────────────────────────────────────────────
@@ -35,11 +39,56 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
     return () => { isMountedRef.current = false; };
   }, []);
 
+  // ── Read safe area insets (Capacitor) ─────────────────────────────────
+  useEffect(() => {
+    const readSafeAreas = () => {
+      const style = getComputedStyle(document.documentElement);
+      const top = parseInt(style.getPropertyValue('--sat') || '0', 10)
+        || parseInt(style.getPropertyValue('env(safe-area-inset-top)') || '0', 10)
+        || 0;
+      const bottom = parseInt(style.getPropertyValue('--sab') || '0', 10)
+        || parseInt(style.getPropertyValue('env(safe-area-inset-bottom)') || '0', 10)
+        || 0;
+
+      // Capacitor: use SafeArea plugin if available
+      if (isCapacitor()) {
+        import('@capacitor/core').then(({ Capacitor }) => {
+          // Try to get status bar height via CSS env
+          const testEl = document.createElement('div');
+          testEl.style.cssText = 'position:fixed;top:env(safe-area-inset-top);left:0;width:1px;height:1px;';
+          document.body.appendChild(testEl);
+          const rect = testEl.getBoundingClientRect();
+          document.body.removeChild(testEl);
+          setSafeAreaTop(rect.top > 0 ? rect.top : top);
+
+          const botEl = document.createElement('div');
+          botEl.style.cssText = 'position:fixed;bottom:env(safe-area-inset-bottom);left:0;width:1px;height:1px;';
+          document.body.appendChild(botEl);
+          const botRect = botEl.getBoundingClientRect();
+          document.body.removeChild(botEl);
+          setSafeAreaBottom(window.innerHeight - botRect.bottom > 0 ? window.innerHeight - botRect.bottom : bottom);
+        }).catch(() => {
+          setSafeAreaTop(top);
+          setSafeAreaBottom(bottom);
+        });
+      } else {
+        setSafeAreaTop(top);
+        setSafeAreaBottom(bottom);
+      }
+    };
+
+    readSafeAreas();
+    window.addEventListener('resize', readSafeAreas);
+    return () => window.removeEventListener('resize', readSafeAreas);
+  }, []);
+
   // ── Measure nav height ────────────────────────────────────────────────
   useEffect(() => {
     if (!navRef.current) return;
     const observer = new ResizeObserver(() => {
-      if (navRef.current) setNavHeight(navRef.current.getBoundingClientRect().height);
+      if (navRef.current) {
+        setNavHeight(navRef.current.getBoundingClientRect().height);
+      }
     });
     observer.observe(navRef.current);
     setNavHeight(navRef.current.getBoundingClientRect().height);
@@ -133,8 +182,6 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
   };
 
   // ── Load sequence ─────────────────────────────────────────────────────
-  // Server already verified by useCalculator before this component opens.
-  // Just show brief loading animation then display iframe.
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
@@ -157,22 +204,33 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
     load();
   }, []);
 
+  // ── Compute iframe container height precisely ─────────────────────────
+  // Use window.innerHeight on mobile (Capacitor) — more reliable than dvh
+  const iframeContainerHeight = isCapacitor() || isElectron()
+    ? `${window.innerHeight - navHeight}px`
+    : `calc(100dvh - ${navHeight}px)`;
+
   // ── Main render ───────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-black z-50"
-      style={{ userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}>
-
+    <div
+      className="fixed inset-0 bg-black z-50"
+      style={{ userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}
+    >
       {/* Navbar */}
-      <nav ref={navRef}
+      <nav
+        ref={navRef}
         className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur border-b border-gray-800"
         style={{
           paddingTop: 'env(safe-area-inset-top)',
           paddingLeft: 'env(safe-area-inset-left)',
           paddingRight: 'env(safe-area-inset-right)',
-        }}>
+        }}
+      >
         <div className="flex items-center justify-between px-4 py-3">
-          <button onClick={exitSecureMode}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-white text-sm font-medium">
+          <button
+            onClick={exitSecureMode}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-white text-sm font-medium"
+          >
             <ArrowLeft size={16} />
             Exit Secure Mode
           </button>
@@ -190,8 +248,10 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
           <div className="text-center text-white max-w-md mx-auto p-6">
             <div className="relative mx-auto mb-6 w-20 h-20">
               <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"
-                style={{ animationDuration: '1s' }}></div>
+              <div
+                className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"
+                style={{ animationDuration: '1s' }}
+              ></div>
               <div className="absolute inset-2 bg-white/10 rounded-full flex items-center justify-center">
                 <Shield size={24} className="text-white" />
               </div>
@@ -202,8 +262,10 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
               {connectionStatus === 'checking' ? 'Checking server...' : 'Connected!'}
             </p>
             <div className="w-full bg-white/20 rounded-full h-2 mb-4">
-              <div className="bg-white h-2 rounded-full transition-all duration-300"
-                style={{ width: `${loadingProgress}%` }}></div>
+              <div
+                className="bg-white h-2 rounded-full transition-all duration-300"
+                style={{ width: `${loadingProgress}%` }}
+              ></div>
             </div>
             <div className="text-white/60 text-sm mb-6">{Math.round(loadingProgress)}%</div>
             <div className="flex items-center justify-center gap-2 text-white/60 text-sm">
@@ -216,19 +278,24 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
 
       {/* Iframe container */}
       {!isLoading && isSecureMode && connectionStatus === 'connected' && (
-        <div className="fixed left-0 right-0 bottom-0 bg-black overflow-hidden"
+        <div
+          className="fixed left-0 right-0 bg-black overflow-hidden"
           style={{
             top: `${navHeight}px`,
+            height: iframeContainerHeight,
             paddingBottom: 'env(safe-area-inset-bottom)',
             paddingLeft: 'env(safe-area-inset-left)',
             paddingRight: 'env(safe-area-inset-right)',
-          }}>
+          }}
+        >
           {iframeLoading && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
               <div className="relative w-16 h-16 mb-4">
                 <div className="absolute inset-0 border-4 border-white/10 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"
-                  style={{ animationDuration: '0.9s' }}></div>
+                <div
+                  className="absolute inset-0 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"
+                  style={{ animationDuration: '0.9s' }}
+                ></div>
                 <div className="absolute inset-2 bg-white/5 rounded-full flex items-center justify-center">
                   <Lock size={18} className="text-blue-400" />
                 </div>
@@ -237,7 +304,6 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
               <p className="text-white/40 text-xs mt-1">Please wait</p>
             </div>
           )}
-
           <iframe
             ref={iframeRef}
             src={proxyUrl}
@@ -245,16 +311,15 @@ export const HiddenProject = ({ onBack, projectUrl }: HiddenProjectProps) => {
             title="Secure Application"
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads"
             referrerPolicy="no-referrer"
-            style={{ display: 'block', width: '100%', height: '100%' }}
+            style={{ display: 'block', width: '100%', height: '100%', minHeight: 0 }}
             onLoad={() => {
               setIframeLoading(false);
               try {
                 if (iframeRef.current?.contentWindow) {
-                  iframeRef.current.contentWindow.postMessage({
-                    type: 'PROXY_CONFIG',
-                    backendProxy: backendProxyUrl,
-                    isProxied: true
-                  }, '*');
+                  iframeRef.current.contentWindow.postMessage(
+                    { type: 'PROXY_CONFIG', backendProxy: backendProxyUrl, isProxied: true },
+                    '*'
+                  );
                 }
               } catch {}
             }}
