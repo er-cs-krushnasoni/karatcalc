@@ -7,35 +7,63 @@ const isElectron = () =>
   typeof window !== 'undefined' &&
   window.navigator.userAgent.toLowerCase().includes('electron');
 
+const isElectronProd = () =>
+  isElectron() && window.location.protocol === 'file:';
+
 const isCapacitor = () =>
   typeof window !== 'undefined' &&
   typeof (window as any).Capacitor !== 'undefined' &&
-  (window as any).Capacitor.isNativePlatform?.();   // ← extra safety: only true on actual native app
+  (window as any).Capacitor.isNativePlatform?.();
 
 export const getSecureConfig = () => {
 
-  if (isElectron()) {
-    const prodFrontend = import.meta.env.VITE_HIDDEN_PROJECT_URL;
-    if (prodFrontend && !prodFrontend.includes('localhost')) {
-      // Deployed Electron version pointing to production
-      return {
-        projectUrl: prodFrontend,
-        backendUrl: import.meta.env.VITE_HIDDEN_PROJECT_BACKEND_URL || '',
-        checkUrl: prodFrontend,
-        triggerSequence: _0x7g8h()
-      };
-    }
-    // Local Electron dev — always localhost:8080/hidden-app
+  // ── Electron dev (localhost:8080) ──────────────────────────────────────
+  if (isElectron() && !isElectronProd()) {
     return {
       projectUrl: 'http://localhost:8080/hidden-app',
       backendUrl: '/hidden-api',
-      checkUrl: 'http://localhost:8080/hidden-app',
+      checkUrl: 'http://localhost:8080',
       triggerSequence: _0x7g8h()
     };
   }
 
+  // ── Electron production (.exe, file:// protocol) ───────────────────────
+  // Calculator works offline. 0+0= checks internet via IPC then loads
+  // Netlify URL in the iframe — no local servers needed.
+  if (isElectronProd()) {
+    const prodFrontend = import.meta.env.VITE_HIDDEN_PROJECT_URL
+      || 'https://jewellery-stock-management.netlify.app';
+    const prodBackend  = import.meta.env.VITE_HIDDEN_PROJECT_BACKEND_URL
+      || 'https://jewellery-stock-management.up.railway.app';
+    return {
+      projectUrl: prodFrontend,
+      backendUrl: prodBackend,
+      // checkUrl is used by Electron IPC check-server handler which checks
+      // internet connectivity — the actual URL value is ignored in prod
+      // but we pass it anyway for dev fallback consistency
+      checkUrl: 'http://localhost:8080',
+      triggerSequence: _0x7g8h()
+    };
+  }
+
+  // ── Capacitor (Android native app) ────────────────────────────────────
+  // In production APK: VITE_CAPACITOR_USE_PRODUCTION=true → use Netlify URLs
+  // In local dev APK:  use local IP as before
   if (isCapacitor()) {
-    // Capacitor (Android) — use LOCAL_IP from env baked at build time
+    const useProduction = import.meta.env.VITE_CAPACITOR_USE_PRODUCTION === 'true';
+    if (useProduction) {
+      const prodFrontend = import.meta.env.VITE_HIDDEN_PROJECT_URL
+        || 'https://jewellery-stock-management.netlify.app';
+      const prodBackend  = import.meta.env.VITE_HIDDEN_PROJECT_BACKEND_URL
+        || 'https://jewellery-stock-management.up.railway.app';
+      return {
+        projectUrl: prodFrontend,
+        backendUrl: prodBackend,
+        checkUrl: prodFrontend,
+        triggerSequence: _0x7g8h()
+      };
+    }
+    // Local dev APK — use local IP
     const localIp = import.meta.env.VITE_CAPACITOR_LOCAL_IP || '192.168.31.32';
     const karatCalcUrl = `http://${localIp}:8080`;
     return {
@@ -46,8 +74,8 @@ export const getSecureConfig = () => {
     };
   }
 
-  // Web browser — works for both local dev and production Netlify
-  // In production: VITE_FRONTEND_PROXY = full Site B Netlify URL
+  // ── Web browser (Netlify production or local dev) ──────────────────────
+  // In production: VITE_FRONTEND_PROXY = full Netlify Site B URL
   // In local dev:  VITE_FRONTEND_PROXY = /hidden-app (relative)
   const frontendProxy = import.meta.env.VITE_FRONTEND_PROXY || '/hidden-app';
   const backendProxy  = import.meta.env.VITE_BACKEND_PROXY  || '/hidden-api';
