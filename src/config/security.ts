@@ -38,20 +38,17 @@ export const getSecureConfig = () => {
     return {
       projectUrl: prodFrontend,
       backendUrl: prodBackend,
-      // checkUrl is used by Electron IPC check-server handler which checks
-      // internet connectivity — the actual URL value is ignored in prod
-      // but we pass it anyway for dev fallback consistency
       checkUrl: 'http://localhost:8080',
       triggerSequence: _0x7g8h()
     };
   }
 
   // ── Capacitor (Android native app) ────────────────────────────────────
-  // In production APK: VITE_CAPACITOR_USE_PRODUCTION=true → use Netlify URLs
-  // In local dev APK:  use local IP as before
   if (isCapacitor()) {
     const useProduction = import.meta.env.VITE_CAPACITOR_USE_PRODUCTION === 'true';
+
     if (useProduction) {
+      // Production APK — use Netlify + Railway URLs
       const prodFrontend = import.meta.env.VITE_HIDDEN_PROJECT_URL
         || 'https://jewellery-stock-management.netlify.app';
       const prodBackend  = import.meta.env.VITE_HIDDEN_PROJECT_BACKEND_URL
@@ -63,12 +60,15 @@ export const getSecureConfig = () => {
         triggerSequence: _0x7g8h()
       };
     }
-    // Local dev APK — use local IP
+
+    // Local dev APK — use local machine IP
+    // backendUrl must be absolute (http://IP:port/hidden-api) because
+    // relative paths resolve to http://localhost inside Android WebView
     const localIp = import.meta.env.VITE_CAPACITOR_LOCAL_IP || '192.168.31.32';
     const karatCalcUrl = `http://${localIp}:8080`;
     return {
       projectUrl: `${karatCalcUrl}/hidden-app`,
-      backendUrl: '/hidden-api',
+      backendUrl: `${karatCalcUrl}/hidden-api`,  // ← absolute, not relative
       checkUrl: karatCalcUrl,
       triggerSequence: _0x7g8h()
     };
